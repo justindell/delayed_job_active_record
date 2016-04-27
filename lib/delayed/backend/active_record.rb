@@ -114,11 +114,9 @@ module Delayed
           when "MSSQL", "Teradata"
             # The MSSQL driver doesn't generate a limit clause when update_all
             # is called directly
-            subsubquery_sql = ready_scope.limit(1).to_sql
-            # select("id") doesn't generate a subquery, so force a subquery
-            subquery_sql = "SELECT id FROM (#{subsubquery_sql}) AS x"
+            id = ready_scope.limit(1).pluck(:id).first
             quoted_table_name = connection.quote_table_name(table_name)
-            sql = ["UPDATE #{quoted_table_name} SET locked_at = ?, locked_by = ? WHERE id IN (#{subquery_sql})", now, worker.name]
+            sql = ["UPDATE #{quoted_table_name} SET locked_at = ?, locked_by = ? WHERE id = ?", now, worker.name, id]
             count = connection.execute(sanitize_sql(sql))
             return nil if count == 0
             # MSSQL JDBC doesn't support OUTPUT INSERTED.* for returning a result set, so query locked row
